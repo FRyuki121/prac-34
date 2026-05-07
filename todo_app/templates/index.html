@@ -43,9 +43,15 @@
         button {
             padding: 8px 12px;
         }
+
+        .date {
+            color: gray;
+            font-size: 12px;
+        }
     </style>
 
 </head>
+
 <body>
 
     <h1>Мои задачи</h1>
@@ -53,10 +59,24 @@
     <ul>
         {% for task in tasks %}
             <li>
-                <strong>{{ task.text }}</strong><br>
-                <small>Создано: {{ task.date }}</small>
 
-                <a href="/delete/{{ loop.index0 }}">Удалить</a>
+                <strong>{{ task.text }}</strong>
+                <br>
+
+                <span class="date">
+                    Создано: {{ task.date }}
+                </span>
+
+                <br><br>
+
+                <a href="/edit/{{ loop.index0 }}">
+                    Редактировать
+                </a>
+
+                <a href="/delete/{{ loop.index0 }}">
+                    Удалить
+                </a>
+
             </li>
         {% endfor %}
     </ul>
@@ -64,11 +84,18 @@
     <h2>Добавить задачу</h2>
 
     <form method="POST" action="/add">
-        <input type="text" name="task" placeholder="Новая задача" required>
+
+        <input
+            type="text"
+            name="task"
+            placeholder="Новая задача"
+            required
+        >
 
         <button type="submit">
             Добавить
         </button>
+
     </form>
 
     <br>
