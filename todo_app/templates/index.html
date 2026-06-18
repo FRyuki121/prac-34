@@ -1,108 +1,47 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-    <title>Список дел</title>
-
-    <style>
-        body {
-            font-family: Arial;
-            margin: 40px;
-            background-color: #eeeeee;
-        }
-
-        h1 {
-            color: blue;
-        }
-
-        ul {
-            list-style: none;
-            padding: 0;
-        }
-
-        li {
-            background: white;
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 5px;
-        }
-
-        a {
-            margin-left: 10px;
-            color: red;
-            text-decoration: none;
-        }
-
-        form {
-            margin-top: 20px;
-        }
-
-        input {
-            padding: 8px;
-        }
-
-        button {
-            padding: 8px 12px;
-        }
-
-        .date {
-            color: gray;
-            font-size: 12px;
-        }
-    </style>
-
+    <meta charset="UTF-8">
+    <title>Управление задачами</title>
 </head>
-
 <body>
-
     <h1>Мои задачи</h1>
+    
+    <p>Осталось задач: {{ tasks|selectattr('done', 'equalto', False)|list|length }}</p>
 
-    <ul>
-        {% for task in tasks %}
-            <li>
+    <div style="margin-bottom: 15px;">
+        <a href="/">Все задачи</a> | 
+        <a href="/active">Показать только активные</a> | 
+        <a href="/completed">Только выполненные</a>
+        <br><br>
+        <a href="/toggle_all/complete"><button>Выполнить все</button></a>
+        <a href="/toggle_all/clear"><button>Отменить все</button></a>
+        <a href="/clear"><button style="background-color: #ffcccc;">Удалить вообще все</button></a>
+    </div>
 
-                <strong>{{ task.text }}</strong>
-                <br>
-
-                <span class="date">
-                    Создано: {{ task.date }}
-                </span>
-
-                <br><br>
-
-                <a href="/edit/{{ loop.index0 }}">
-                    Редактировать
-                </a>
-
-                <a href="/delete/{{ loop.index0 }}">
-                    Удалить
-                </a>
-
-            </li>
-        {% endfor %}
-    </ul>
-
-    <h2>Добавить задачу</h2>
-
-    <form method="POST" action="/add">
-
-        <input
-            type="text"
-            name="task"
-            placeholder="Новая задача"
-            required
-        >
-
-        <button type="submit">
-            Добавить
-        </button>
-
+    <form action="/add" method="POST">
+        <input type="text" name="task" placeholder="Новая задача..." required>
+        <button type="submit">Добавить</button>
     </form>
 
-    <br>
-
-    <a href="/clear">
-        Очистить всё
-    </a>
-
+    <ul>
+    {% for task in tasks %}
+        {% if filter_mode == 'all' or (filter_mode == 'active' and not task.done) or (filter_mode == 'completed' and task.done) %}
+            <li>
+                {% if task.done %}
+                    <s>{{ task.text }}</s> {% else %}
+                    {{ task.text }} {% endif %}
+                
+                — <small>{{ task.date }}</small>
+                
+                <a href="/toggle/{{ loop.index0 }}"> 
+                    {% if task.done %} ↩️ Вернуть {% else %} ✅ Выполнено {% endif %}
+                </a> | 
+                <a href="/edit/{{ loop.index0 }}">Редактировать</a> | 
+                <a href="/delete/{{ loop.index0 }}" style="color: red;">Удалить</a>
+            </li>
+        {% endif %}
+    {% endfor %}
+    </ul>
 </body>
 </html>
