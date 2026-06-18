@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, redirect
 import json
 import os
+import time
 from datetime import datetime
 
 app = Flask(__name__)
@@ -35,8 +36,9 @@ def add_task():
 
     if new_task:
         task = {
+            'id': int(time.time() * 1000),
             'text': new_task,
-            'date': datetime.now().strftime('%d.%m.%Y %H:%M'),
+            'date': datetime.now().strftime('%Y-%m-%d'),
             'done': False,
             'priority': priority
         }
@@ -48,17 +50,21 @@ def add_task():
 
 @app.route('/toggle/<int:task_id>')
 def toggle_task(task_id):
-    if 0 <= task_id < len(tasks):
-        tasks[task_id]['done'] = not tasks[task_id]['done']
-        save_tasks(tasks)
+    for task in tasks:
+        if task.get('id') == task_id:
+            task['done'] = not task['done']
+            save_tasks(tasks)
+            break
     return redirect(request.referrer or '/')
 
 
 @app.route('/delete/<int:task_id>')
 def delete_task(task_id):
-    if 0 <= task_id < len(tasks):
-        tasks.pop(task_id)
-        save_tasks(tasks)
+    for i, task in enumerate(tasks):
+        if task.get('id') == task_id:
+            tasks.pop(i)
+            save_tasks(tasks)
+            break
     return redirect('/')
 
 
@@ -69,27 +75,42 @@ def clear_tasks():
     return redirect('/')
 
 
-@app.route('/by_priority')
-def by_priority():
-    priority_order = {'высокий': 3, 'средний': 2, 'низкий': 1}
+@app.route('/search')
+def search():
+    query = request.args.get('q', '').strip().lower()
+    if query:
+        filtered_tasks = [task for task in tasks if query in task['text'].lower()]
+    else:
+        filtered_tasks = tasks
+    return render_template('index.html', tasks=filtered_tasks, search_query=query, filter_mode='all')
+
+
+@app.route('/sort/date')
+def sort_by_date():
+    sorted_tasks = sorted(tasks, key=lambda t: t.get('date', ''), reverse=True)
+    return render_template('index.html', tasks=sorted_tasks, filter_mode='all')
+
+
+@app.route('/sort/status')
+def sort_by_status():
+    sorted_tasks = sorted(tasks, key=lambda t: t.get('done', False))
+    return render_template('index.html', tasks=sorted_tasks, filter_mode='all')
+
+
+@app.route('/sort/priority')
+def sort_by_priority():
+    priority_order = {'высокий': 1, 'средний': 2, 'низкий': 3}
     sorted_tasks = sorted(
         tasks,
-        key=lambda task: priority_order.get(task.get('priority', 'средний'), 2),
-        reverse=True
+        key=lambda t: priority_order.get(t.get('priority', 'средний'), 2)
     )
     return render_template('index.html', tasks=sorted_tasks, filter_mode='all')
 
 
-@app.route('/by_priority_active')
-def by_priority_active():
-    priority_order = {'высокий': 3, 'средний': 2, 'низкий': 1}
-    active_tasks = [t for t in tasks if not t.get('done', False)]
-    sorted_active = sorted(
-        active_tasks,
-        key=lambda task: priority_order.get(task.get('priority', 'средний'), 2),
-        reverse=True
-    )
-    return render_template('index.html', tasks=sorted_active, filter_mode='active')
+@app.route('/sort/alpha')
+def sort_by_alpha():
+    sorted_tasks = sorted(tasks, key=lambda t: t.get('text', '').lower())
+    return render_template('index.html', tasks=sorted_tasks, filter_mode='all')
 
 
 @app.route('/active')
@@ -115,23 +136,21 @@ def toggle_all(action):
 
 @app.route('/edit/<int:task_id>', methods=['GET', 'POST'])
 def edit_task(task_id):
-    if task_id < 0 or task_id >= len(tasks):
-        return "Задача не найдена", 404
+    task = None
+    for t in tasks:
+        if t.get('id') == task_id:
+            task = t
+            break
 
-    task = tasks[task_id]
+    if not task:
+        return "Задача не найдена", 404
 
     if request.method == 'POST':
         new_text = request.form.get('task', '').strip()
         new_priority = request.form.get('priority', 'средний')
-        
-        old_text = task['text']
-        old_priority = task.get('priority', 'средний')
 
         if new_text == '':
             return render_template('edit.html', task=task, message="Текст не может быть пустым!")
-
-        if new_text == old_text and new_priority == old_priority:
-            return render_template('edit.html', task=task, message="Ничего не изменено")
 
         task['text'] = new_text
         task['priority'] = new_priority
